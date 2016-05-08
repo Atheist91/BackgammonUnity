@@ -129,7 +129,7 @@ public class GameManager : MonoBehaviour
             if(PossibleMoves != null && PossibleMoves.IsMovePossible(InField))
             {
                 FromField.MovePawn(InField);
-                PossibleMoves.Clear();
+                PossibleMoves.MoveTo(InField);
             }
         }
     }
@@ -212,11 +212,7 @@ public class GameManager : MonoBehaviour
             int fieldIndex = FieldsOrder.IndexOf(InPawn.GetField());            
             if(IsValidFieldIndex(fieldIndex))
             {
-                // Getting amount of dots from dices
-                int firstDiceValue = Dices[0].GetDots();
-                int secondDiceValue = Dices[1].GetDots();
-
-                PossibleMoves = new PossibleMoves(this, fieldIndex, firstDiceValue, secondDiceValue);
+                PossibleMoves = new PossibleMoves(this, fieldIndex, Dices);
             }
         }
     }
@@ -246,5 +242,10 @@ public class GameManager : MonoBehaviour
     public PlayerColor GetPlayerTurn()
     {
         return CurrentPlayer;
+    }
+
+    public List<DiceController> GetDices()
+    {
+        return Dices;
     }
 }

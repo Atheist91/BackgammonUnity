@@ -2,6 +2,13 @@
 using System.Collections.Generic;
 using System.Collections;
 
+public enum DiceState
+{
+    NotUsed,
+    HalfUsed,
+    FullyUsed
+}
+
 public class DiceController : MonoBehaviour
 {
     public delegate void RolledDelegate(DiceController InDice, int InDots);
@@ -19,9 +26,18 @@ public class DiceController : MonoBehaviour
     public bool bConstantFlipTime = true;
     public float MinFlipTime = 0.1f;
     public float MaxFlipTime = 0.4f;
+    public Sprite FadeHalf;
+    public Sprite FadeFull;
+    public SpriteRenderer FadeRenderer;
     protected int SpriteIndex = 0;
     protected bool bCanRoll = false;
     protected bool bFinishedRolling = true;
+    protected DiceState State = DiceState.NotUsed;
+
+#if DEBUG
+    [Header("Debug")]
+    public bool bDebugDouble = false;
+#endif
 
     void Start()
     {
@@ -73,6 +89,12 @@ public class DiceController : MonoBehaviour
     {
         if(bCanRoll)
         {
+            State = DiceState.NotUsed;
+            if (FadeRenderer != null)
+            {
+                FadeRenderer.gameObject.SetActive(false);
+            }
+
             bCanRoll = false;
             bFinishedRolling = false;
             StartCoroutine(RollCoroutine());
@@ -83,9 +105,27 @@ public class DiceController : MonoBehaviour
         }
     }
 
+    public DiceState GetUsageState()
+    {
+        return State;
+    }
+
     public void Use(bool bInWhole = true)
     {
-        
+        if (bInWhole || State == DiceState.HalfUsed)
+        {
+            State = DiceState.FullyUsed;
+        }
+        else
+        {
+            State = DiceState.HalfUsed;
+        }
+
+        if (FadeRenderer != null)
+        {
+            FadeRenderer.sprite = State == DiceState.FullyUsed ? FadeFull : FadeHalf;
+            FadeRenderer.gameObject.SetActive(true);
+        }
     }
 
     public IEnumerator RollCoroutine()
@@ -107,6 +147,15 @@ public class DiceController : MonoBehaviour
         }
 
         SpriteIndex = tempIndex;
+
+#if DEBUG
+        if(bDebugDouble)
+        {
+            SpriteIndex = 1;
+            MySpriteRenderer.sprite = Sprites[SpriteIndex];
+        }
+#endif
+
         bFinishedRolling = true;
 
         if (OnRolled != null)
