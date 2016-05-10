@@ -1,24 +1,29 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 public class BackgroundResizer : MonoBehaviour
 {
-    public bool ResizeOnStartup = false;
+    /// <summary>
+    /// Whether background should be resized to fit the screen when the game is started or not.
+    /// </summary>
+    public bool bResizeOnStartup = false;
 
     void Start()
     {        
-        if(ResizeOnStartup)
+        if(bResizeOnStartup)
         {
             FitToScreen();
         }
     }
 
+    /// <summary>
+    /// Resizes background to fit the screen.
+    /// </summary>
     protected void FitToScreen()
     {
-        // Centering sprite
+        // Centering object in the world
         transform.localPosition = Vector3.zero;
 
-        // Resizing
+        // Scaling object
         SpriteRenderer renderer = GetComponent<SpriteRenderer>();
         if (renderer != null)
         {

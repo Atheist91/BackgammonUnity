@@ -30,6 +30,9 @@ public class Move
             StartField = GameManager.GetField(StartIndex);
             DestinationField = GameManager.GetField(DestinationIndex);
         }
+
+        Logger.Log(this, "Move created. Start field: {0}({1}), destination: {2}({3}), steps: {4}, dices: {5}({6}), valid: {7}", 
+            StartIndex, StartField ? StartField.name : "NULL", DestinationIndex, DestinationField ? DestinationField.name : "NULL", Steps, Dices.Count, string.Join(", ", Dices.Select(d => d.name).ToArray()), IsValid());
     }
 
     public bool IsValid()
@@ -72,17 +75,32 @@ public class Move
         return DestinationField;
     }
 
+    public FieldController GetStart()
+    {
+        return StartField;
+    }
+
     public override string ToString()
     {
         return string.Format("[{0}->{1}({2} steps)]", StartIndex, DestinationIndex, Steps);
     }
 
-    public void UseDices()
+    public void DoMove()
     {
-        Logger.Log(this, "Using {0} dices for move {1} while dices were the same [{2}]", Dices.Count, ToString(), bAreDicesTheSame);
-        foreach(DiceController dice in Dices)
+        Logger.Log(this, "Making move {0}. Dices required by this move {1}. Rolled dices were the same [{2}]", ToString(), Dices.Count, bAreDicesTheSame);
+        if (IsValid())
+        {            
+            StartField.MovePawn(DestinationField);
+            
+            foreach (DiceController dice in Dices)
+            {
+                dice.Use(!bAreDicesTheSame);
+            }
+        }
+        else
         {
-            dice.Use(!bAreDicesTheSame);
+            // Should never happen
+            Logger.Warning(this, "Couldn't make a move {0} because it's invalid.", ToString());
         }
     }
 }
@@ -100,33 +118,48 @@ public class PossibleMoves
 
             // Doubling amount of moves if amount of dots on both dices are the same.
             bool bDicesAreTheSame = Dices[0].GetDots() == Dices[1].GetDots();
-            int Counter = bDicesAreTheSame ? 2 : 1;
-            List<DiceController> temp = new List<DiceController>();
-            do
-            {
-                temp.Clear();
-
+            if(bDicesAreTheSame)
+            {               
+                List<DiceController> temp = new List<DiceController>();
                 foreach (DiceController dice in Dices)
                 {
-                    Moves.Add(new Move(InGameManager, InStartIndex, new DiceController[] { dice }, bDicesAreTheSame));
-                    temp.Add(dice);
+                    if(dice.GetUsageState() != DiceState.FullyUsed)
+                    {
+                        temp.Add(dice);
+                        if(dice.GetUsageState() == DiceState.NotUsed)
+                        {
+                            temp.Add(dice);
+                        }
+                    }
                 }
 
-                Moves.Add(new Move(InGameManager, InStartIndex, temp.ToArray(), bDicesAreTheSame));                
-
-                Counter--;
+                if (temp.Count > 1)
+                {
+                    for (int iCombination = 1; iCombination <= temp.Count; ++iCombination)
+                    {
+                        Moves.Add(new Move(InGameManager, InStartIndex, temp.Take(iCombination).ToArray(), bDicesAreTheSame));
+                    }
+                }
+                else
+                {
+                    if(temp.Count == 1)
+                    {
+                        Moves.Add(new Move(InGameManager, InStartIndex, temp.ToArray(), bDicesAreTheSame));
+                    }
+                    else
+                    {
+                        // error
+                    }
+                }                
             }
-            while (Counter > 0);
-
-            // Adding last move in case the amount of dots were the same on both dices.
-            if (bDicesAreTheSame)
+            else
             {
-                temp.Concat(temp);
-
-                Moves.Add(new Move(InGameManager, InStartIndex, temp.ToArray(), bDicesAreTheSame));
+                Moves.Add(new Move(InGameManager, InStartIndex, new DiceController[] { Dices[0] }, bDicesAreTheSame));
+                Moves.Add(new Move(InGameManager, InStartIndex, new DiceController[] { Dices[1] }, bDicesAreTheSame));
+                Moves.Add(new Move(InGameManager, InStartIndex, new DiceController[] { Dices[0], Dices[1] }, bDicesAreTheSame));
             }
 
-            Logger.Log(this, "Possible moves based on dices roll [{0}-{1}] are: {2}", Dices[0], Dices[1], string.Join(", ", Moves.Select(m => m.GetSteps().ToString()).ToArray()));
+            Logger.Log(this, "Possible moves based on dices roll [{0}-{1}] are: {2}", Dices[0].GetDots(), Dices[1].GetDots(), string.Join(", ", Moves.Select(m => m.GetSteps().ToString()).ToArray()));
 
             // Removing invalid moves
             for (int iMove = Moves.Count - 1; iMove >= 0; --iMove)
@@ -173,9 +206,9 @@ public class PossibleMoves
         // Getting the move that we'll be doing
         int moveIndex = -1;
         Move move = FindMove(InDestination, ref moveIndex);
-        if(move != null)
+        if(move != null && move.IsValid())
         {
-            move.UseDices();
+            move.DoMove();
         }
 
         Clear();
@@ -208,5 +241,5 @@ public class PossibleMoves
     protected bool IsValidMoveIndex(int InIndex)
     {
         return InIndex >= 0 && InIndex < Moves.Count;
-    }
+    }    
 }

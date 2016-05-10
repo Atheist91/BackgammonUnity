@@ -24,6 +24,7 @@ public class PawnsContainer : MonoBehaviour
 
     [Header("Basic")]
     public GameManager GameManager;
+    public PawnsContainer Band;
 
     protected List<PawnController> Pawns;
 
@@ -62,31 +63,25 @@ public class PawnsContainer : MonoBehaviour
     {
         if (InPawn != null)
         {
-            if(Pawns.Count < MaxPawns)
+            if(Pawns.Count == 1)
             {
-                int firstEmpty = Pawns.IndexOf(null);
-                if (firstEmpty == -1)
+                if(GetPawn().GetColor() != InPawn.GetColor())
                 {
-                    Pawns.Add(null);
-                    firstEmpty = Pawns.Count - 1;
-                }
-
-                Debug.Log(string.Format("Adding pawn to the triangle [{0}].", firstEmpty));
-
-                InPawn.SetParent(this);
-                InPawn.SetOrder(firstEmpty + 10);
-                InPawn.SetGameManager(GameManager);
-
-                Pawns[firstEmpty] = InPawn;
-
-                if (bInDoRearrange)
-                {
-                    Rearrange();
+                    PawnController tempPawn = GetPawn();
+                    RemovePawn(tempPawn);
+                    Band.AddPawn(tempPawn, true);
                 }
             }
-            else
+
+            Pawns.Add(InPawn);
+
+            InPawn.SetParent(this);
+            InPawn.SetOrder(Pawns.Count + 10);
+            InPawn.SetGameManager(GameManager);
+
+            if (bInDoRearrange)
             {
-                // warning
+                Rearrange();
             }
         }
         else
@@ -145,9 +140,17 @@ public class PawnsContainer : MonoBehaviour
             int index = Pawns.IndexOf(InPawn);
             if (IsValidPawnIndex(index))
             {
-                Pawns.RemoveAt(index);
+                Pawns.RemoveAt(index);                
             }
-        }        
+        }
+
+        // Really silly workaround for colliders of pawns that somehow got covered 
+        // by colliders of fields which ends up not being able to click on pawns.
+        foreach(PawnController pawn in Pawns)
+        {
+            pawn.gameObject.SetActive(false);
+            pawn.gameObject.SetActive(true);
+        }
     }
 
     protected bool IsValidPawnIndex(int InIndex)

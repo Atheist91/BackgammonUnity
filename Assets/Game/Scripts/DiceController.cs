@@ -14,6 +14,9 @@ public class DiceController : MonoBehaviour
     public delegate void RolledDelegate(DiceController InDice, int InDots);
     public event RolledDelegate OnRolled;
 
+    public delegate void DiceUsedDelegate(DiceController InDice, DiceState InState);
+    public event DiceUsedDelegate OnUsed;
+
     public SpriteRenderer MySpriteRenderer;    
     public List<Sprite> Sprites = new List<Sprite>( new Sprite[6] );
     /// <summary>
@@ -69,7 +72,9 @@ public class DiceController : MonoBehaviour
         else
         {
             Logger.Error(this, "Component couldn't be initialized properly because reference to GameManager was missing.");
-        }        
+        }
+
+        gameObject.SetActive(false);
     }
 
     private void GameManager_OnStateChanged(GameState InOldState, GameState InNewState)
@@ -112,19 +117,18 @@ public class DiceController : MonoBehaviour
 
     public void Use(bool bInWhole = true)
     {
-        if (bInWhole || State == DiceState.HalfUsed)
+        if(State == DiceState.NotUsed)
         {
-            State = DiceState.FullyUsed;
+            SetState(bInWhole ? DiceState.FullyUsed : DiceState.HalfUsed);
         }
         else
         {
-            State = DiceState.HalfUsed;
+            SetState(DiceState.FullyUsed);
         }
 
-        if (FadeRenderer != null)
+        if (OnUsed != null)
         {
-            FadeRenderer.sprite = State == DiceState.FullyUsed ? FadeFull : FadeHalf;
-            FadeRenderer.gameObject.SetActive(true);
+            OnUsed(this, State);
         }
     }
 
@@ -172,10 +176,29 @@ public class DiceController : MonoBehaviour
     public void Reset()
     {
         bCanRoll = true;
+        SetState(DiceState.NotUsed);
     }
 
     public bool HasFinishedRolling()
     {
         return bFinishedRolling;
+    }
+
+    protected void SetState(DiceState InState)
+    {
+        State = InState;
+
+        if (FadeRenderer != null)
+        {
+            if (State == DiceState.NotUsed)
+            {
+                FadeRenderer.gameObject.SetActive(false);
+            }
+            else
+            {
+                FadeRenderer.sprite = State == DiceState.FullyUsed ? FadeFull : FadeHalf;
+                FadeRenderer.gameObject.SetActive(true);
+            }
+        }
     }
 }

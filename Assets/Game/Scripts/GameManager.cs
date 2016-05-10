@@ -1,6 +1,5 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -10,7 +9,10 @@ public enum GameState
     RedPlayerRolls,
     RedPlayerMoves,
     WhitePlayerRolls,
-    WhitePlayerMoves
+    WhitePlayerMoves,
+
+    // 
+    Last
 }
 
 public class GameManager : MonoBehaviour
@@ -65,6 +67,7 @@ public class GameManager : MonoBehaviour
                 if (Dices[iDice] != null)
                 {
                     Dices[iDice].OnRolled += Dice_OnRolled;
+                    Dices[iDice].OnUsed += Dice_OnUsed;
                 }
                 else
                 {
@@ -80,6 +83,27 @@ public class GameManager : MonoBehaviour
         StartCoroutine(StartGame(3f));
 	}
 
+    private void Dice_OnUsed(DiceController InDice, DiceState InState)
+    {
+        bool bEveryFullyUsed = true;
+        foreach(DiceController dice in Dices)
+        {
+            if(dice.GetUsageState() != DiceState.FullyUsed)
+            {
+                bEveryFullyUsed = false;
+                break;
+            }
+        }
+
+        // TODO: checking if there are any available moves
+        bool bAvailableMovesExist = true;
+
+        if(bEveryFullyUsed || !bAvailableMovesExist)
+        {
+            SwitchGameState();
+        }
+    }
+
     private void Dice_OnRolled(DiceController InDice, int InDots)
     {
         bool bFinished = true;
@@ -94,18 +118,7 @@ public class GameManager : MonoBehaviour
 
         if (bFinished)
         {
-            if(State == GameState.RedPlayerRolls)
-            {
-                ChangeState(GameState.RedPlayerMoves);
-            }
-            else if (State == GameState.WhitePlayerRolls)
-            {
-                ChangeState(GameState.WhitePlayerMoves);
-            }
-            else
-            {
-                // error, dices shouldn't be rolling when GameState is different than RedPlayerRolls or WhitePlayerRolls
-            }
+            SwitchGameState();
         }
     }
 
@@ -113,7 +126,7 @@ public class GameManager : MonoBehaviour
     {
         yield return new WaitForSeconds(InDelay);
 
-        ChangeState(GameState.RedPlayerRolls);
+        SwitchGameState();
     }
 
     public GameState GetGameState()
@@ -128,23 +141,49 @@ public class GameManager : MonoBehaviour
             // If the field on which we clicked is one of possible target fields
             if(PossibleMoves != null && PossibleMoves.IsMovePossible(InField))
             {
-                FromField.MovePawn(InField);
                 PossibleMoves.MoveTo(InField);
             }
         }
     }
 
-    protected virtual void ChangeState(GameState InNewState)
+    protected virtual void SwitchGameState()
     {
         GameState OldState = State;
-        State = InNewState;
+        State = FindNextGameState();
 
         CurrentPlayer = (State == GameState.RedPlayerMoves || State == GameState.RedPlayerRolls) ? PlayerColor.Red : PlayerColor.White;
+
+        Logger.Log(this, "Switching game state from {0} to {1}. It's {2} player turn.", OldState, State, CurrentPlayer);
 
         if (OnStateChanged != null)
         {
             OnStateChanged(OldState, State);
-        }            
+        }
+    }
+
+    protected virtual GameState FindNextGameState()
+    {
+        switch (State)
+        {
+            case GameState.Init:
+                return GameState.RedPlayerRolls;
+                
+            case GameState.RedPlayerRolls:
+                return GameState.RedPlayerMoves;
+
+            case GameState.RedPlayerMoves:
+                return GameState.WhitePlayerRolls;
+
+            case GameState.WhitePlayerRolls:
+                return GameState.WhitePlayerMoves;
+
+            case GameState.WhitePlayerMoves:
+                return GameState.RedPlayerRolls;
+        }
+
+        Logger.Error(this, "This should never happen.");
+
+        return GameState.RedPlayerRolls;
     }
 
     [MenuItem("Custom/Setup field order")]
