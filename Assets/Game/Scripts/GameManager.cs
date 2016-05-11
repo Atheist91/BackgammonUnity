@@ -22,8 +22,9 @@ public class GameManager : MonoBehaviour
 
     public GameObject PawnRedPrefab;
     public GameObject PawnWhitePrefab;    
-    public List<FieldController> FieldsOrder = new List<FieldController>(new FieldController[24]);
-    public List<DiceController> Dices = new List<DiceController>(new DiceController[2]);    
+    public List<FieldController> FieldsOrder = new List<FieldController>(new FieldController[26]);
+    public List<DiceController> Dices = new List<DiceController>(new DiceController[2]);
+    public BandController Band;
     protected GameState State = GameState.Init;
     protected PlayerColor CurrentPlayer = PlayerColor.Red;
     protected FieldController FromField = null;    
@@ -31,21 +32,26 @@ public class GameManager : MonoBehaviour
 
     public FieldController GetField(int InIndex)
     {
-        if(IsValidFieldIndex(InIndex))
+        return GetPawnsContainer(InIndex) as FieldController;
+    }
+
+    public PawnsContainer GetPawnsContainer(int InIndex)
+    {
+        if (IsValidFieldIndex(InIndex))
         {
             return FieldsOrder[InIndex];
         }
 
         return null;
     }
-
+    
     void Start ()
     {
         if (FieldsOrder.Count == 24)
         {
-            for(int iField= 0; iField < 24; ++iField)
+            for(int iField = 0; iField < 24; ++iField)
             {
-                if (FieldsOrder[iField] != null)
+                if (FieldsOrder[iField])
                 {
                     FieldsOrder[iField].OnClicked += Field_OnClicked;
                 }
@@ -59,8 +65,8 @@ public class GameManager : MonoBehaviour
         {
             Debug.LogError("FieldsOrder list has to contain 24 elements as there are 24 fields in this game.");
         }
-	    
-        if(Dices.Count == 2)
+        
+        if (Dices.Count == 2)
         {
             for (int iDice = 0; iDice < 2; ++iDice)
             {
@@ -118,6 +124,8 @@ public class GameManager : MonoBehaviour
 
         if (bFinished)
         {
+            MovePawnsFromBand();
+
             SwitchGameState();
         }
     }
@@ -237,22 +245,30 @@ public class GameManager : MonoBehaviour
     public void ShowPossibleMoves(PawnController InPawn)
     {
         Logger.Log(this, "Showing possible moves for pawn. Player: {0}, Pawn: {1}", CurrentPlayer, InPawn.GetColor());
-        if (InPawn != null && CanPlayerMove(InPawn) && InPawn.GetField() != null)
+        if (InPawn && CanPlayerMove(InPawn) && InPawn.GetField())
         {
-            // Getting starting field
-            FromField = InPawn.GetField();
-
             // Clearing possible moves if needed
             if (PossibleMoves != null)
             {
                 PossibleMoves.Clear();
             }
 
-            int fieldIndex = FieldsOrder.IndexOf(InPawn.GetField());            
-            if(IsValidFieldIndex(fieldIndex))
+            PossibleMoves = new PossibleMoves(this, InPawn.GetField(), Dices);
+        }
+    }    
+
+    protected void MovePawnsFromBand()
+    {
+        if(Band && Band.HasPawns(CurrentPlayer))
+        {
+            // Clearing possible moves if needed
+            if (PossibleMoves != null)
             {
-                PossibleMoves = new PossibleMoves(this, fieldIndex, Dices);
+                PossibleMoves.Clear();
             }
+
+            PossibleMoves = new PossibleMoves(this, Band, Dices, true);
+            PossibleMoves.DoFirstMove();
         }
     }
 
@@ -286,5 +302,24 @@ public class GameManager : MonoBehaviour
     public List<DiceController> GetDices()
     {
         return Dices;
+    }
+
+    /// <summary>
+    /// Returns an index of given PawnContainer.
+    /// When a BandController is passed, then the index will be -1 or 24 depending on which player's turn it is.
+    /// It's made so, it'll be easier to calculate move based on starting index + amount of steps for pawn to make.
+    /// </summary>
+    /// <param name="InContainer">The container for which we want to know the index.</param>
+    /// <returns>Index of a given container.</returns>
+    public int GetIndexOfContainer(PawnsContainer InContainer)
+    {
+        if (InContainer is BandController)
+        {
+            return CurrentPlayer == PlayerColor.Red ? -1 : 24;
+        }
+        else
+        {
+            return FieldsOrder.IndexOf(InContainer as FieldController);
+        }
     }
 }

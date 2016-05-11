@@ -15,9 +15,9 @@ public class FieldController : PawnsContainer
         }
     }
 
-    public void Reset()
+    public override void Reset()
     {
-        if(HighlightSprite != null)
+        if (HighlightSprite != null)
         {
             HighlightSprite.gameObject.SetActive(false);
         }
@@ -33,6 +33,6 @@ public class FieldController : PawnsContainer
 
     public override bool IsRoomForPawn(PlayerColor InPlayer)
     {
-        return base.IsRoomForPawn(InPlayer) && IsEmpty() || (GetPawn().GetColor() == InPlayer) || Pawns.Count == 1;
+        return base.IsRoomForPawn(InPlayer) && HasPawns() || (GetPawn().GetColor() == InPlayer) || Pawns.Count == 1;
     }
 }

@@ -109,7 +109,7 @@ public class PawnsContainer : MonoBehaviour
 
     public virtual PawnController GetPawn()
     {
-        if(!IsEmpty())
+        if(!HasPawns())
         {
             return Pawns[Pawns.Count - 1];
         }
@@ -119,7 +119,7 @@ public class PawnsContainer : MonoBehaviour
 
     public virtual PawnController GetPawn(PlayerColor InColor)
     {
-        if (!IsEmpty())
+        if (!HasPawns())
         {
             for (int iPawn = Pawns.Count - 1; iPawn >= 0; --iPawn)
             {
@@ -143,14 +143,6 @@ public class PawnsContainer : MonoBehaviour
                 Pawns.RemoveAt(index);                
             }
         }
-
-        // Really silly workaround for colliders of pawns that somehow got covered 
-        // by colliders of fields which ends up not being able to click on pawns.
-        foreach(PawnController pawn in Pawns)
-        {
-            pawn.gameObject.SetActive(false);
-            pawn.gameObject.SetActive(true);
-        }
     }
 
     protected bool IsValidPawnIndex(int InIndex)
@@ -165,7 +157,7 @@ public class PawnsContainer : MonoBehaviour
         {
             pawnTransform = Pawns[iPawn].transform;
             pawnTransform.localScale = PawnScale;
-            pawnTransform.localPosition = new Vector3(0f, PawnStartingY + (iPawn * GetSpacing()));            
+            pawnTransform.localPosition = new Vector3(0f, PawnStartingY + (iPawn * GetSpacing()), -1f);
         }
     }
 
@@ -175,9 +167,22 @@ public class PawnsContainer : MonoBehaviour
         return Mathf.Lerp(MaxPawnSpacing, MinPawnSpacing, alpha);
     }
 
-    public bool IsEmpty()
+    public bool HasPawns()
     {
         return Pawns.Count == 0;
+    }
+
+    public bool HasPawns(PlayerColor InColor)
+    {
+        foreach(PawnController pawn in Pawns)
+        {
+            if(pawn.GetColor() == InColor)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public virtual bool HasRoomForPawn(PlayerColor InPawnColor)
@@ -199,5 +204,10 @@ public class PawnsContainer : MonoBehaviour
     {
         RemovePawn(InPawn);
         InDestination.AddPawn(InPawn, true);
+    }
+
+    public virtual void Reset()
+    {
+
     }
 }
