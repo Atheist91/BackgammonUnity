@@ -55,11 +55,11 @@ public class PawnController : MonoBehaviour
             if(GameManager != null)
             {
                 // If the game is in state that allows to make a move with Pawn
-                if (GameManager.CanPlayerMove(this))
+                if (GameManager.CanPawnBeMoved(this))
                 {
                     // Showing possible moves that can be done by any Pawn lying on the field at which this Pawn is.
                     // It's because we won't be moving the Pawn that was clicked, but instead we'll move the one from the top of the Field.
-                    GameManager.ShowPossibleMoves(this);
+                    GameManager.ShowPossibleMoves(Field);
                 }
             }
             else

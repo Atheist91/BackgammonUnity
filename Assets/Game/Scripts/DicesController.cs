@@ -7,6 +7,8 @@ public class DicesController : MonoBehaviour
     /// List of dices that are controlled by this DicesController.
     /// </summary>
     public List<DiceController> Dices = new List<DiceController>(new DiceController[2]);
+    public GameManager GameManager;
+    public SpriteRenderer MySpriteRenderer;
 
     void Start ()
     {
@@ -24,7 +26,20 @@ public class DicesController : MonoBehaviour
         {
             Logger.Error(this, "Dices list has to contain 2 elements as 2 dices are needed for this game. Amount of elements= {0}", Dices.Count);
         }
-    }    
+
+        if(GameManager)
+        {
+            GameManager.OnStateChanged += GameManager_OnStateChanged;
+        }
+    }
+
+    private void GameManager_OnStateChanged(GameState InOldState, GameState InNewState)
+    {
+        if(MySpriteRenderer && (InNewState == GameState.RedPlayerRolls || InNewState == GameState.WhitePlayerRolls))
+        {
+            MySpriteRenderer.enabled = true;
+        }
+    }
 
     void OnMouseDown()
     {
@@ -34,6 +49,11 @@ public class DicesController : MonoBehaviour
             {
                 dice.Roll();
             }
+        }
+
+        if(MySpriteRenderer)
+        {
+            MySpriteRenderer.enabled = false;
         }
     }
 }

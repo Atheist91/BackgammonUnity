@@ -23,9 +23,9 @@ public class Move
             Steps = Dices.Select(d => d.GetDots()).Sum();
 
             Start = InContainer;
-            StartIndex = GameManager.GetIndexOfContainer(Start);
+            StartIndex = GameManager.GetIndexOf(Start);
 
-            DestinationIndex = StartIndex + (GameManager.GetPlayerTurn() == PlayerColor.Red ? Steps : -Steps);
+            DestinationIndex = StartIndex + (GameManager.GetPlayer() == PlayerColor.Red ? Steps : -Steps);
             DestinationField = GameManager.GetField(DestinationIndex);
         }
 
@@ -44,7 +44,7 @@ public class Move
             }
         }
 
-        return bAllUsable && DestinationField != null && Start != null && DestinationField.IsRoomForPawn(GameManager.GetPlayerTurn());
+        return bAllUsable && DestinationField != null && Start != null && DestinationField.IsRoomForPawn(GameManager.GetPlayer());
     }
 
     public void Show()

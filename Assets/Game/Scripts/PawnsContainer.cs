@@ -35,7 +35,7 @@ public class PawnsContainer : MonoBehaviour
         GameManager GameManager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
         if (GameManager)
         {
-            GameObject pawnTemplate = GameManager.GetPawnTemplateObject(InitialPawnsColor);
+            GameObject pawnTemplate = GameManager.GetPawnTemplate(InitialPawnsColor);
             GameObject tempPawnObj;
 
             for (int iPawn = 0; iPawn < InitialPawns; ++iPawn)
