@@ -26,51 +26,11 @@ public class GameManager : MonoBehaviour
     public List<DiceController> Dices = new List<DiceController>(new DiceController[2]);
     public BandController Band;
     protected GameState State = GameState.Init;
-    protected PlayerColor CurrentPlayer = PlayerColor.Red;
-    protected FieldController FromField = null;    
+    protected PlayerColor CurrentPlayer = PlayerColor.Red;  
     protected PossibleMoves PossibleMoves = null;
 
     void Start()
     {
-        if (FieldsOrder.Count == 24)
-        {
-            for (int iField = 0; iField < 24; ++iField)
-            {
-                if (FieldsOrder[iField])
-                {
-                    FieldsOrder[iField].OnClicked += Field_OnClicked;
-                }
-                else
-                {
-                    Debug.LogError(string.Format("Field {0} isn't set properly (it's empty).", iField));
-                }
-            }
-        }
-        else
-        {
-            Debug.LogError("FieldsOrder list has to contain 24 elements as there are 24 fields in this game.");
-        }
-
-        if (Dices.Count == 2)
-        {
-            for (int iDice = 0; iDice < 2; ++iDice)
-            {
-                if (Dices[iDice] != null)
-                {
-                    Dices[iDice].OnRolled += Dice_OnRolled;
-                    Dices[iDice].OnUsed += Dice_OnUsed;
-                }
-                else
-                {
-                    Debug.LogError(string.Format("Dice {0} isn't set properly (it's empty).", iDice));
-                }
-            }
-        }
-        else
-        {
-            Debug.LogError(string.Format("Dices list has to contain 2 elements as 2 dices are needed for this game. Amount of elements= {0}", Dices.Count));
-        }
-
         StartCoroutine(StartGame(3f));
     }
 
