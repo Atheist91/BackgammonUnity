@@ -31,6 +31,17 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        foreach(DiceController dice in Dices)
+        {
+            dice.OnRolled += Dice_OnRolled;
+            dice.OnUsed += Dice_OnUsed;
+        }
+
+        foreach(FieldController field in FieldsOrder)
+        {
+            field.OnClicked += Field_OnClicked;
+        }
+
         StartCoroutine(StartGame(3f));
     }
 
