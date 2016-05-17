@@ -10,6 +10,7 @@ public class PawnController : MonoBehaviour
 {
     public SpriteRenderer MySpriteRenderer;
     public PlayerColor Color = PlayerColor.Red;
+    public float AlphaWhenFaded = 0.35f;
 
     protected GameManager GameManager;
     protected PawnsContainer Container;
@@ -18,6 +19,28 @@ public class PawnController : MonoBehaviour
     public virtual void SetGameManager(GameManager InGameManager)
     {
         GameManager = InGameManager;
+        if(GameManager)
+        {
+            GameManager.OnStateChanged += GameManager_OnStateChanged;
+        }
+    }
+
+    private void GameManager_OnStateChanged(GameState InOldState, GameState InNewState)
+    {
+        bool bFade = false;
+        if(InNewState == GameState.RedPlayerMoves)
+        {
+            bFade = Color == PlayerColor.White;
+        }
+        else if (InNewState == GameState.WhitePlayerMoves)
+        {
+            bFade = Color == PlayerColor.Red;
+        }
+
+        if(MySpriteRenderer)
+        {
+            MySpriteRenderer.color = new Color(1f, 1f, 1f, bFade ? AlphaWhenFaded : 1f);
+        }       
     }
 
     public virtual void SetOrder(int InOrder)
