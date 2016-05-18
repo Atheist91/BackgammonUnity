@@ -71,8 +71,19 @@ public class PawnController : MonoBehaviour
 
     void OnMouseDown()
     {
+#if UNITY_EDITOR
+        // Just for testing purposes. Allows to move clicked pawn to the Band.
+        // Has to be used BEFORE rolling dices.
+        if (Input.GetKey("b"))
+        {
+            Field.RemovePawn(this);
+            Field.Band.AddPawn(this, true);
+            return;
+        }
+#endif
+
         // If pawn is placed on any Field
-        if(Field != null)
+        if (Field != null)
         {
             // If we got proper reference to GameManager
             if(GameManager != null)

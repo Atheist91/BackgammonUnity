@@ -189,6 +189,11 @@ public class PossibleMoves
         Moves.Clear();
     }
 
+    public bool HasAnyMoves()
+    {
+        return Moves.Count > 0;
+    }
+
     public bool IsMovePossible(FieldController InField)
     {
         foreach (Move move in Moves)

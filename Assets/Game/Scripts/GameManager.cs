@@ -175,6 +175,19 @@ public class GameManager : MonoBehaviour
         return false;
     }
 
+    public bool IsDiceAvailable()
+    {
+        foreach (DiceController dice in Dices)
+        {
+            if(dice.GetUsageState() != DiceState.FullyUsed)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Coroutine for starting the game. It basically will switch GameState from Init to RedPlayerRolls.
     /// </summary>
@@ -189,12 +202,13 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Switches game from current state to next one. Also, fires OnStateChanged event.
+    /// Sets game state. Shouldn't be used directly, use SwitchGameState() or SkipTurn() instead.
     /// </summary>
-    protected void SwitchGameState()
+    /// <param name="InNewState">New state of the game.</param>
+    protected void SetState(GameState InNewState)
     {
         GameState OldState = State;
-        State = FindNextGameState();
+        State = InNewState;
 
         CurrentPlayer = (State == GameState.RedPlayerMoves || State == GameState.RedPlayerRolls) ? PlayerColor.Red : PlayerColor.White;
 
@@ -207,34 +221,84 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Switches game from current state to next one. Also, fires OnStateChanged event.
+    /// </summary>
+    protected void SwitchGameState()
+    {
+        SetState(FindNextGameState());
+    }
+
+    /// <summary>
+    /// Skips turn of current player.
+    /// </summary>
+    protected void SkipTurn()
+    {
+        SetState(CurrentPlayer == PlayerColor.Red ? GameState.WhitePlayerRolls : GameState.RedPlayerRolls);
+    }
+
+    /// <summary>
     /// Tries to move Pawn that belongs to CurrentPlayer from Band (if any).
     /// </summary>
-    /// <returns>Whether move has been made (or Band didn't have any Pawns that belong to CurrentPlayer) or not.</returns>
+    /// <returns>Whether we should skip player's turn (because he has pawns on band) or not.
     protected bool MovePawnFromBand()
     {
-        if (Band && Band.HasPawns(CurrentPlayer))
+        if(Band)
         {
-            // Clearing possible moves if needed
-            if (PossibleMoves != null)
+            bool bKeepTrying = false;
+            bool bBandHasPawns = false;
+            bool bIsDiceAvailable = false;
+            do
             {
-                PossibleMoves.Clear();
+                bBandHasPawns = Band.HasPawns(CurrentPlayer);
+                bIsDiceAvailable = IsDiceAvailable();
+                bKeepTrying = bBandHasPawns && bIsDiceAvailable;
+
+                if (bKeepTrying)
+                {
+                    // Since we're here, it means that there are our pawns on Band
+                    // and dices still can be used for moves.
+
+                    // Trying to find new moves that start from Band
+                    PossibleMoves = new PossibleMoves(this, Band, Dices, true);
+
+                    // If we found any moves, we can do first one.
+                    if (PossibleMoves.HasAnyMoves())
+                    {
+                        // Doing first available move, we've found
+                        PossibleMoves.DoFirstMove();
+
+                        // bKeepTrying is already set to true, 
+                        // so we don't need to do with it anything else
+                        // as we want to repeat whole process remove all
+                        // our pawns from Band
+                    }
+                    else
+                    {
+                        // If we reached this place, it means that the we still 
+                        // have at least one pawn placed on the Band. Since we 
+                        // couldn't move it (had no possible moves) we have to skip 
+                        // our turn according to backgammon rules.
+
+                        bKeepTrying = false;
+                    }
+                }
             }
+            while (bKeepTrying);
 
-            PossibleMoves = new PossibleMoves(this, Band, Dices, true);
-            
-            // TODO:
-            // Checking if there are any moves
-            // If so, do the first move and return true
-            // else return false as it means that we didn't make a move
+            bBandHasPawns = Band.HasPawns(CurrentPlayer);
+            bIsDiceAvailable = IsDiceAvailable();
 
-            PossibleMoves.DoFirstMove();
-            return true;
+            if(bBandHasPawns || !bIsDiceAvailable)
+            {
+                return true;
+            }
         }
         else
         {
-            Logger.Log(this, "Band has no {0} pawns left. Player can move now.", CurrentPlayer);
-            return true;
+            Logger.Error(this, "Couldn't move pawns from Band because reference to it is null.");
         }
+
+        return false;   
     }
 
     /// <summary>
@@ -289,27 +353,38 @@ public class GameManager : MonoBehaviour
 
     protected void Dice_OnUsed(DiceController InDice, DiceState InState)
     {
-        bool bEveryFullyUsed = true;
-        foreach(DiceController dice in Dices)
+        // We're checking if player used all his dices already (or he has no other 
+        // moves available) if so, we're skipping his turn.
+        // However, we want to do that only, if the player is actually supposed to move his pawn.
+        // If that's not the case and the dice was used, it means that GameManager automatically
+        // moved player's pawn from Band to the board. In such scenario, we'll skip player's turn 
+        // in Dice_OnRolled() after using MovePawnFromBand().
+
+        if (State == GameState.RedPlayerMoves || State == GameState.WhitePlayerMoves)
         {
-            if(dice.GetUsageState() != DiceState.FullyUsed)
+            bool bEveryFullyUsed = true;
+            foreach (DiceController dice in Dices)
             {
-                bEveryFullyUsed = false;
-                break;
+                if (dice.GetUsageState() != DiceState.FullyUsed)
+                {
+                    bEveryFullyUsed = false;
+                    break;
+                }
             }
-        }
 
-        // TODO: checking if there are any available moves
-        bool bAvailableMovesExist = true;
+            // TODO: checking if there are any available moves
+            bool bAvailableMovesExist = true;
 
-        if(bEveryFullyUsed || !bAvailableMovesExist)
-        {
-            SwitchGameState();
-        }
+            if (bEveryFullyUsed || !bAvailableMovesExist)
+            {
+                SwitchGameState();
+            }
+        }        
     }
 
     protected void Dice_OnRolled(DiceController InDice, int InDots)
     {
+        // Checking if all dices finished rolling
         bool bFinished = true;
         foreach (DiceController dice in Dices)
         {
@@ -318,13 +393,22 @@ public class GameManager : MonoBehaviour
                 bFinished = false;
                 break;
             }
-        }
-
+        }        
+        
         if (bFinished)
         {
-            MovePawnFromBand();
-
-            SwitchGameState();
+            // We're trying to move as many pawns of current player from Band as possible.
+            if(MovePawnFromBand())
+            {
+                // Means that there are some pawns left on the Band or player used all his dices.
+                // In any of these 2 scenarios, we're skipping current player's turn.
+                 
+                SkipTurn();
+            }
+            else
+            {
+                SwitchGameState();
+            }
         }
     }
 
